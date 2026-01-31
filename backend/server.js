@@ -1,40 +1,34 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
+const express = require('express');
+const cors = require('cors');
+const connectDB = require('./db'); // Fixed: removed /backend/
+const authRoutes = require('./routes/auth'); // Fixed: removed /backend/
+const Product = require('./models/Product'); // Fixed: removed /backend/
 
 const app = express();
+
+// Connect to MongoDB
+connectDB();
 
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect("mongodb://127.0.0.1:27017/ecommerce_simple")
-.then(() => console.log("MongoDB Connected"))
-.catch(err => console.error("MongoDB Connection Error", err));
+// API Routes
+app.use('/api/auth', authRoutes);
 
-const productSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  price: { type: Number, required: true },
-  image: { type: String, required: true },
-  category: { type: String },
-  rating: { type: Number },
-  description: { type: String }
-}, { timestamps: true });
-
-const Product = mongoose.model("Product", productSchema);
-
-app.get("/products", async (req, res) => {
+// Get all products or search by title
+app.get('/api/products', async (req, res) => {
   try {
-    const products = await Product.find();
+    const { q } = req.query;
+    // Professional search logic: case-insensitive regex
+    const query = q ? { title: { $regex: q, $options: 'i' } } : {};
+    const products = await Product.find(query);
     res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching products", error });
+    res.status(500).json({ message: "Server Error", error });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("WebMart Backend Running 🚀");
-});
-
-app.listen(5000, () => {
-  console.log("Backend running at http://localhost:5000");
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
